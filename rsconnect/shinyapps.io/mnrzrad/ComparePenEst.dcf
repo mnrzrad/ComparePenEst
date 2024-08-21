@@ -1,0 +1,12 @@
+name: ComparePenEst
+title: ComparePenEst
+username: mnrzrad
+account: mnrzrad
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12493343
+bundleId: 9011443
+url: https://mnrzrad.shinyapps.io/ComparePenEst/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

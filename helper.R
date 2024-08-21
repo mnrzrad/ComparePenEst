@@ -1,8 +1,10 @@
 library('glmnet')
 
 set.seed(888)
-x1 <- rnorm(50)
-x2 <- x1 + rnorm(50,mean = 0.1)
+# x1 <- rnorm(50, sd = 1)
+# x2 <- rnorm(50,mean = 0.1,sd=2)
+x1 <- rnorm(50, sd = 1)
+x2 <- x1 + rnorm(50,mean = 0.1,sd=1.5)
 beta1 = 0.6
 beta2 = 0.4
 epsilon <- rnorm(50)
@@ -27,6 +29,11 @@ for (i in 1:n_lstsq) {
     rss_lstsq[i, j] <- sum((z0-s[i]*z1-s[j]*z2)^2)
   }
 }
+
+s2 = sum(lstsq$residuals**2)/(n_lstsq)
+Z <- cbind(z1,z2) #cbind(x1,x2)
+mg <- s2*diag(solve(t(Z)%*%Z))
+
 # persp(s, s, rss_lstsq, xlab="beta1", ylab="beta2", zlab="rss_lstsq")
 
 
@@ -75,6 +82,22 @@ rss_lasso <- rep(NA,m_lasso)
 for (i in 1:m_lasso) {
   rss_lasso[i] <- sum((z0 - lasso$beta[1, i]*z1 -lasso$beta[2, i]*z2)^2)
 }
+
+alasso <- glmnet(x = cbind(z1, z2), y = z0, alpha = 1,intercept=FALSE, nlambda=1000,
+                 penalty.factor = 1 / abs(lstsq_beta))
+m_alasso <- dim(alasso$beta)[2]
+rss_alasso <- rep(NA,m_alasso)
+for (i in 1:m_alasso) {
+  rss_alasso[i] <- sum((z0 - alasso$beta[1, i]*z1 -alasso$beta[2, i]*z2)^2)
+}
+
+mglasso <- glmnet(x = cbind(z1, z2), y = z0, alpha = 1,intercept=FALSE, nlambda=1000, penalty.factor = 1 / mg)
+m_mglasso <- dim(mglasso$beta)[2]
+rss_mglasso <- rep(NA,m_mglasso)
+for (i in 1:m_mglasso) {
+  rss_mglasso[i] <- sum((z0 - mglasso$beta[1, i]*z1 -mglasso$beta[2, i]*z2)^2)
+}
+
 
 k1 <- c(0, 1, 1.1, 1.2, 1.5, 2, 2.5, 3:9)
 k1 <- c(0.1 * k1, k1, 10 * k1, 100 * k1, 1000 * k1)
@@ -149,6 +172,46 @@ plotFunction <- function(value, type) {
           r0 <- find_closest(rss_lasso, k1_filtered[i-1])
           arrows(lasso$beta[1, r0], lasso$beta[2, r0], lasso$beta[1, r], lasso$beta[2, r], len=0.05, lwd = 4, col = 'green')
           
+        }
+      }
+    }
+  }
+  
+  if(type == "adaptiveLASSO"){
+    for (i in seq_along(k1_filtered)) {
+      if(i == 1){
+        points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
+        d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
+        draw_diamond(d0, lwd = 3, col = "blue")
+      }else{
+        r <- find_closest(rss_alasso, k1_filtered[i])
+        d <- abs(alasso$beta[1, r])+abs(alasso$beta[2, r])
+        draw_diamond(d, lwd = 3, col = "blue")
+        if(i==2){
+          arrows(lstsq_beta[1], lstsq_beta[2], alasso$beta[1, r], alasso$beta[2, r], len=0.05,lwd = 4, col = 'green')
+        }else{
+          r0 <- find_closest(rss_alasso, k1_filtered[i-1])
+          arrows(alasso$beta[1, r0], alasso$beta[2, r0],alasso$beta[1, r], alasso$beta[2, r], len=0.05, lwd = 4, col = 'green')
+        }
+      }
+    }
+  }
+  
+  if(type == "marginalizedLASSO"){
+    for (i in seq_along(k1_filtered)) {
+      if(i == 1){
+        points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
+        d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
+        draw_diamond(d0, lwd = 3, col = "blue")
+      }else{
+        r <- find_closest(rss_mglasso, k1_filtered[i])
+        d <- abs(mglasso$beta[1, r])+abs(mglasso$beta[2, r])
+        draw_diamond(d, lwd = 3, col = "blue")
+        if(i==2){
+          arrows(lstsq_beta[1], lstsq_beta[2], mglasso$beta[1, r], mglasso$beta[2, r], len=0.05,lwd = 4, col = 'green')
+        }else{
+          r0 <- find_closest(rss_mglasso, k1_filtered[i-1])
+          arrows(mglasso$beta[1, r0], mglasso$beta[2, r0],mglasso$beta[1, r], mglasso$beta[2, r], len=0.05, lwd = 4, col = 'green')
         }
       }
     }

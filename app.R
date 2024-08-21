@@ -13,10 +13,12 @@ ui <- page_sidebar(
       "Estimators",
       "Select one of the estimators",
       choices = list(
+        "Ridge",
         "LASSO",
-        "Ridge"
+        "adaptiveLASSO",
+        "marginalizedLASSO"
       ),
-      selected = "LASSO"
+      selected = "Ridge"
     ),
     sliderInput(
       "lambda",
