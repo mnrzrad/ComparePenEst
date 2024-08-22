@@ -4,11 +4,15 @@ library('glmnet')
 # x1 <- rnorm(50, sd = 1)
 # x2 <- rnorm(50,mean = 0.1,sd=2)
 
+set.seed(88)
 x1 <- rnorm(50, sd = 0.5)
-x2 <- x1 + rnorm(50, mean = 0.5, sd = 2)
+
+x2 <- x1 + rnorm(50, mean = 0.5, sd = 1.5)
   
-beta1 = 0.6
-beta2 = 0.4
+beta1 = 0.7
+beta2 = 0.3
+
+
 epsilon <- rnorm(50)
 y = x1*beta1 + x2*beta2 + epsilon
 
@@ -24,6 +28,8 @@ lstsq_beta <- coef(lstsq)
 
 n_lstsq <- 50
 s <- seq(-1, 1, length=n_lstsq)
+
+
 rss_lstsq <- matrix(NA, nrow=n_lstsq, ncol=n_lstsq)
 for (i in 1:n_lstsq) {
   for (j in 1:n_lstsq) {
@@ -33,7 +39,7 @@ for (i in 1:n_lstsq) {
 
 s2 = sum(lstsq$residuals**2)/(n_lstsq)
 Z <- cbind(z1,z2) #cbind(x1,x2)
-mg <- s2 / diag(solve(t(Z)%*%Z))
+mg <- s2/ diag(solve(t(Z)%*%Z))
 
 # persp(s, s, rss_lstsq, xlab="beta1", ylab="beta2", zlab="rss_lstsq")
 
@@ -67,23 +73,29 @@ draw_diamond<- function(d, w, lwd, col){
   segments( 0,-d, d, 0,col ,lwd, lty = 1)
 }
 
-draw_combined_penalty <- function(r, d, alpha, lwd = 1) {
-  # Define the number of points to draw
-  n <- 100
-  t <- seq(0, 2*pi, length.out = n)
-  
-  # Draw circle
-  circle_x <- r * cos(t)
-  circle_y <- r * sin(t)
-  lines(circle_x, circle_y, col = "red", lwd = lwd)
-  
-  # Draw diamond
-  diamond_x <- c(d, 0, -d, 0, d)
-  diamond_y <- c(0, d, 0, -d, 0)
-  lines(diamond_x, diamond_y, col = "blue", lwd = lwd)
-}
-
-
+# elastic_net_penalty <- function(beta1, beta2, alpha) {
+#   l1_penalty <- abs(beta1) + abs(beta2)
+#   l2_penalty <- sqrt(beta1^2 + beta2^2)
+#   alpha * l1_penalty + (1 - alpha) * l2_penalty
+# }
+# 
+# draw_combined_penalty <- function(c, alpha, level, lwd = 2, col) {
+#   
+#   x <- seq(-c, c, length.out = 100)
+#   y <- seq(-c, c, length.out = 100)
+#   
+#   
+#   grid <- expand.grid(x = s, y = s)
+#   
+#   l1_penalty <- abs(grid$x) + abs(grid$y)
+#   l2_penalty <- sqrt(grid$x^2 + grid$y^2)
+#   
+#   elastic_net_penalty <- alpha * l1_penalty + (1 - alpha) * l2_penalty
+#   
+#   contour_matrix <- matrix(elastic_net_penalty, nrow = length(s), ncol = length(s))
+#   
+#   contour(x, y, contour_matrix, levels =level, drawlabels = FALSE, lwd = lwd, col = col, add = TRUE)
+# }
 
 ridge <- glmnet(cbind(z1, z2), z0, 
                 alpha=0, intercept=FALSE, nlambda=1000)
@@ -117,21 +129,21 @@ for (i in 1:m_mglasso) {
   rss_mglasso[i] <- sum((z0 - mglasso$beta[1, i]*z1 -mglasso$beta[2, i]*z2)^2)
 }
 
-enet <- glmnet(x = cbind(z1, z2), y = z0, alpha = 0.5,intercept=FALSE, nlambda=1000, penalty.factor = 1 / mg)
-m_enet <- dim(enet$beta)[2]
-rss_enet <- rep(NA,m_enet)
-for (i in 1:m_enet) {
-  rss_enet[i] <- sum((z0 - enet$beta[1, i]*z1 -enet$beta[2, i]*z2)^2)
-}
+# enet <- glmnet(x = cbind(z1, z2), y = z0, alpha = 0.5,intercept=FALSE, nlambda=1000)
+# m_enet <- dim(enet$beta)[2]
+# rss_enet <- rep(NA,m_enet)
+# for (i in 1:m_enet) {
+#   rss_enet[i] <- sum((z0 - enet$beta[1, i]*z1 -enet$beta[2, i]*z2)^2)
+# }
 
 
 # k1 <- c(0, 1, 1.1, 1.2, 1.5, 2, 2.5, 3:9)
 # k1 <- c(0.1 * k1, k1, 10 * k1, 100 * k1, 1000 * k1)
 # Define contour levels with k1
-k1 <- min(rss_lstsq) + c(0.1, 0.5, seq(1, 20, 2), seq(30, 1000, 10))
+k1 <- min(rss_lstsq) + c(0.5, seq(1, 20, 2), seq(30, 1000, 10))
  
 plotFunction <- function(value, type, data) {
-  
+
   k1_filtered <- k1[k1 <= (min(rss_lstsq) + value)]
   
   # Draw axes
@@ -167,10 +179,12 @@ plotFunction <- function(value, type, data) {
     for (i in seq_along(k1_filtered)) {
       if(i == 1){
         points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
-        draw_circle(sqrt(lstsq_beta[1]^2 + lstsq_beta[2]^2), lwd = 3, col = "blue")
+        R = sqrt(lstsq_beta[1]^2 + lstsq_beta[2]^2)
+        draw_circle(R, lwd = 3, col = "blue")
       }else{
         r <- find_closest(rss_ridge, k1_filtered[i])
-        draw_circle(sqrt(ridge$beta[1, r]^2 + ridge$beta[2, r]^2), lwd = 3, col = "blue")
+        R <- sqrt(ridge$beta[1, r]^2 + ridge$beta[2, r]^2)
+        draw_circle(R, lwd = 3, col = "blue")
         if(i==2){
           arrows(lstsq_beta[1], lstsq_beta[2], ridge$beta[1, r], ridge$beta[2, r], len=0.05,lwd = 4, col = 'green')
         }else{
@@ -206,20 +220,21 @@ plotFunction <- function(value, type, data) {
   # if(type == "ElasticNet"){
   #   for (i in seq_along(k1_filtered)) {
   #     if(i == 1){
-  #       points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
+  #       points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "blue", cex = 1)
   #       d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
-  #       draw_combined_penalty(d0, d0, alpha= 0.5, lwd = 2)
+  #       l = elastic_net_penalty(lstsq_beta[1], lstsq_beta[2], alpha = 0.5) 
+  #       draw_combined_penalty(d0, alpha= 0.5, level = l, lwd = 2, col = 'blue')
   #     }else{
   #       r <- find_closest(rss_enet, k1_filtered[i])
-  #       d <- abs(lasso$beta[1, r])+abs(lasso$beta[2, r])
-  #       R <- sqrt(ridge$beta[1, r]^2 + ridge$beta[2, r]^2)
-  #       draw_combined_penalty(R, d, alpha= 0.5, lwd = 2)
+  #       l = elastic_net_penalty(enet$beta[1, r], enet$beta[1, r], alpha = 0.5)
+  #       c <- max(abs(enet$beta[1, r]), abs(enet$beta[2, r]))+3 
+  #       draw_combined_penalty(c, alpha= 0.5, level = l, lwd = 2, col = 'blue')
   #       if(i==2){
   #         arrows(lstsq_beta[1], lstsq_beta[2], enet$beta[1, r], enet$beta[2, r], len=0.05,lwd = 4, col = 'green')
   #       }else{
   #         r0 <- find_closest(rss_enet, k1_filtered[i-1])
   #         arrows(enet$beta[1, r0], enet$beta[2, r0], enet$beta[1, r], enet$beta[2, r], len=0.05, lwd = 4, col = 'green')
-  #         
+  # 
   #       }
   #     }
   #   }
@@ -295,7 +310,7 @@ getExplanation <- function(estimator) {
   } else if (estimator == "adaptiveLASSO") {
     list(
       author = "Zou, Hui",
-      photo = "http://users.stat.umn.edu/~zouxx019/myphotos/zou-department-photo.jpg",
+      photo = "https://i1.rgstatic.net/ii/profile.image/801976296148994-1568217457382_Q512/Hui-Zou-5.jpg",
       formula = "$$\\hat{\\beta}^{\\textrm{adaptiveLASSO}} = \\arg\\min_{\\beta} \\left\\{\\|y - X\\beta\\|_2^2 + \\lambda \\sum_{j} w_j |\\beta_j|\\right\\} \\quad \\text{where } w_j = (|\\beta^{\\textrm{OLS}}_j|)^{-1}$$",
       reference = "Zou, H. (2006). The Adaptive Lasso and Its Oracle Properties. Journal of the American Statistical Association, 101(476), 1418–1429. http://www.jstor.org/stable/27639762"
     )
