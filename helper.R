@@ -9,8 +9,8 @@ x1 <- rnorm(50, sd = 0.5)
 
 x2 <- x1 + rnorm(50, mean = 0.5, sd = 1.5)
   
-beta1 = 0.7
-beta2 = 0.3
+beta1 = 0.8
+beta2 = 0.2
 
 
 epsilon <- rnorm(50)
@@ -39,7 +39,7 @@ for (i in 1:n_lstsq) {
 
 s2 = sum(lstsq$residuals**2)/(n_lstsq)
 Z <- cbind(z1,z2) #cbind(x1,x2)
-mg <- s2/ diag(solve(t(Z)%*%Z))
+mg <- s2 * diag(solve(t(Z)%*%Z))
 
 # persp(s, s, rss_lstsq, xlab="beta1", ylab="beta2", zlab="rss_lstsq")
 
@@ -140,7 +140,7 @@ for (i in 1:m_mglasso) {
 # k1 <- c(0, 1, 1.1, 1.2, 1.5, 2, 2.5, 3:9)
 # k1 <- c(0.1 * k1, k1, 10 * k1, 100 * k1, 1000 * k1)
 # Define contour levels with k1
-k1 <- min(rss_lstsq) + c(0.5, seq(1, 20, 2), seq(30, 1000, 10))
+k1 <- min(rss_lstsq) + c(seq(1, 10, 1), seq(10, 100, 10))
  
 plotFunction <- function(value, type, data) {
 
@@ -167,46 +167,39 @@ plotFunction <- function(value, type, data) {
             drawlabels = FALSE)
   }
   
-
+  # points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
+  
   # Plot true beta values with "OLS" label
-  points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "black", cex = 1)
-  text(lstsq_beta[1], lstsq_beta[2] + 0.01, "OLS", col = "black", cex = 1, pos = 3)
+  points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "black", cex = 2)
+  text(lstsq_beta[1], lstsq_beta[2] + 0.01, "OLS", col = "red", cex = 2, pos = 3)
   
   # # Find the closest value for contouring
   # r1 <- find_closest(rss_ridge, k1[1])
   
   if(type == "Ridge"){
+    R = sqrt(lstsq_beta[1]^2 + lstsq_beta[2]^2)
+    draw_circle(R, lwd = 3, col = "blue")
     for (i in seq_along(k1_filtered)) {
-      if(i == 1){
-        points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
-        R = sqrt(lstsq_beta[1]^2 + lstsq_beta[2]^2)
-        draw_circle(R, lwd = 3, col = "blue")
-      }else{
         r <- find_closest(rss_ridge, k1_filtered[i])
         R <- sqrt(ridge$beta[1, r]^2 + ridge$beta[2, r]^2)
         draw_circle(R, lwd = 3, col = "blue")
-        if(i==2){
-          arrows(lstsq_beta[1], lstsq_beta[2], ridge$beta[1, r], ridge$beta[2, r], len=0.05,lwd = 4, col = 'green')
+        if(i==1){
+         arrows(lstsq_beta[1], lstsq_beta[2], ridge$beta[1, r], ridge$beta[2, r], len=0.05,lwd = 4, col = 'green')
         }else{
           r0 <- find_closest(rss_ridge, k1_filtered[i-1])
-          arrows(ridge$beta[1, r0], ridge$beta[2, r0], ridge$beta[1, r], ridge$beta[2, r], len=0.05, lwd = 4, col = 'green')
-          
-        }
+           arrows(ridge$beta[1, r0], ridge$beta[2, r0], ridge$beta[1, r], ridge$beta[2, r], len=0.05, lwd = 4, col = 'green')
+         }
       }
-    }
   }
   
   if(type == "LASSO"){
+    d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
+    draw_diamond(d0, 1, lwd = 3, col = "blue")
     for (i in seq_along(k1_filtered)) {
-      if(i == 1){
-        points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
-        d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
-        draw_diamond(d0, 1, lwd = 3, col = "blue")
-      }else{
         r <- find_closest(rss_lasso, k1_filtered[i])
         d <- abs(lasso$beta[1, r])+abs(lasso$beta[2, r])
         draw_diamond(d, 1, lwd = 3, col = "blue")
-        if(i==2){
+        if(i==1){
           arrows(lstsq_beta[1], lstsq_beta[2], lasso$beta[1, r], lasso$beta[2, r], len=0.05,lwd = 4, col = 'green')
         }else{
           r0 <- find_closest(rss_lasso, k1_filtered[i-1])
@@ -214,7 +207,6 @@ plotFunction <- function(value, type, data) {
           
         }
       }
-    }
   }
   
   # if(type == "ElasticNet"){
@@ -242,40 +234,33 @@ plotFunction <- function(value, type, data) {
   
   
   if(type == "adaptiveLASSO"){
+    d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
+    w <- abs(lstsq_beta[1])/abs(lstsq_beta[2])
+    draw_diamond(d0, w, lwd = 3, col = "blue")
     for (i in seq_along(k1_filtered)) {
-      if(i == 1){
-        points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
-        d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
-        w <- abs(lstsq_beta[1])/abs(lstsq_beta[2])
-        draw_diamond(d0, w, lwd = 3, col = "blue")
-      }else{
         r <- find_closest(rss_alasso, k1_filtered[i])
         d <- abs(alasso$beta[1, r])+abs(alasso$beta[2, r])
         w <- abs(lstsq_beta[1])/abs(lstsq_beta[2])
         draw_diamond(d, w, lwd = 3, col = "blue")
-        if(i==2){
+        if(i==1){
           arrows(lstsq_beta[1], lstsq_beta[2], alasso$beta[1, r], alasso$beta[2, r], len=0.05,lwd = 4, col = 'green')
         }else{
           r0 <- find_closest(rss_alasso, k1_filtered[i-1])
           arrows(alasso$beta[1, r0], alasso$beta[2, r0],alasso$beta[1, r], alasso$beta[2, r], len=0.05, lwd = 4, col = 'green')
         }
       }
-    }
   }
   
   if(type == "marginalizedLASSO"){
+    d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
+    w <- mg[1]/mg[2]
+    draw_diamond(d0, w, lwd = 3, col = "blue")
     for (i in seq_along(k1_filtered)) {
-      if(i == 1){
-        points(lstsq_beta[1], lstsq_beta[2], pch = 19, col = "red", cex = 1)
-        d0 <-  abs(lstsq_beta[1])+abs(lstsq_beta[2])
-        w <- mg[1]/mg[2]
-        draw_diamond(d0, w, lwd = 3, col = "blue")
-      }else{
         r <- find_closest(rss_mglasso, k1_filtered[i])
         d <- abs(mglasso$beta[1, r])+abs(mglasso$beta[2, r])
         w <- mg[1]/mg[2]
         draw_diamond(d, w,  lwd = 3, col = "blue")
-        if(i==2){
+        if(i==1){
           arrows(lstsq_beta[1], lstsq_beta[2], mglasso$beta[1, r], mglasso$beta[2, r], len=0.05,lwd = 4, col = 'green')
         }else{
           r0 <- find_closest(rss_mglasso, k1_filtered[i-1])
@@ -284,7 +269,6 @@ plotFunction <- function(value, type, data) {
       }
     }
   }
-}
 
 
 

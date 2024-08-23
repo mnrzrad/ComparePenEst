@@ -40,9 +40,9 @@ ui <- page_sidebar(
       "lambda",
       "Lambda Index:",
       min = 0,
-      max = 20,
-      value = 2,
-      step = 2,
+      max = 10,
+      value = 1,
+      step = 1,
       animate = TRUE # Add animation to the slider
     )
   ),
